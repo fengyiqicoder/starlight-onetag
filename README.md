@@ -65,6 +65,11 @@ The key is public by design, like an analytics ID: it ends up in the built HTML 
 
 Nothing is stored on a server. OneTag AI keeps token counts and timestamps, not questions or page text.
 
+## See also
+
+- [Lantern](https://github.com/fengyiqicoder/astro-docs-ai): a docs template that ships with this dialog built in.
+- [Static AI Block](https://github.com/fengyiqicoder/static-ai-block): twelve copy-paste AI blocks for any static page.
+
 ## License
 
 MIT. Powered by OneTag AI.
