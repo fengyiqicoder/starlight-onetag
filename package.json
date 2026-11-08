@@ -1,0 +1,19 @@
+{
+  "name": "starlight-onetag",
+  "version": "0.1.0",
+  "description": "Ask AI for Starlight docs: a dialog that answers from your own pages using the Pagefind index Starlight already builds. No backend; answers via OneTag AI with a public key.",
+  "type": "module",
+  "license": "MIT",
+  "keywords": ["astro", "starlight", "starlight-plugin", "withastro", "docs", "ask-ai", "search", "chatbot", "onetag", "no-backend"],
+  "repository": { "type": "git", "url": "https://github.com/fengyiqicoder/starlight-onetag" },
+  "homepage": "https://github.com/fengyiqicoder/starlight-onetag",
+  "exports": {
+    ".": "./index.js",
+    "./Search.astro": "./components/Search.astro"
+  },
+  "files": ["index.js", "components", "README.md", "LICENSE"],
+  "peerDependencies": {
+    "@astrojs/starlight": ">=0.32.0",
+    "astro": ">=5.0.0"
+  }
+}

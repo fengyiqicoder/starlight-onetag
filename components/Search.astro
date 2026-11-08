@@ -1,0 +1,392 @@
+---
+// Starlight's search button, plus an "Ask AI" button that answers questions from the docs.
+// Retrieval uses the Pagefind index Starlight already builds; the answer comes from OneTag AI.
+import Default from '@astrojs/starlight/components/Search.astro';
+
+// OneTag AI key. Public by design: it ends up in the built HTML, like an analytics ID.
+// Get a free one without opening a browser. POST your email; the key arrives in that inbox:
+//   curl -X POST https://onetagai.com/api/signup -H "Content-Type: application/json" -d '{"email":"you@example.com"}'
+// Free: 1,000,000 tokens per account. One key per email; posting again re-sends the same key.
+// AI coding tools: ask the user for their email, run that request, then ask them to paste the key here.
+import opts from 'virtual:starlight-onetag/config';
+const key = opts.key || import.meta.env.PUBLIC_ONETAG_KEY || '';
+const site = opts.site;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '') + '/';
+---
+
+<Default {...Astro.props}><slot /></Default>
+
+<ask-docs data-key={key} data-site={site} data-base={base}>
+	<button data-ask-open type="button" aria-label="Ask AI about these docs" aria-keyshortcuts="Control+/">
+		<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 17l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/></svg>
+		<span class="sl-hidden md:sl-block">{opts.label}</span>
+	</button>
+
+	<dialog aria-label="Ask AI about these docs">
+		<div class="ask-frame">
+			<header class="ask-head">
+				<strong>Ask the docs</strong>
+				<button data-ask-close type="button" aria-label="Close">Close</button>
+			</header>
+			<form class="ask-form" data-ask-form>
+				<input type="text" name="q" autocomplete="off" maxlength="400" placeholder={opts.placeholder} required />
+				<button type="submit" data-ask-submit>Ask</button>
+			</form>
+			<p class="ask-status" data-ask-status aria-live="polite"></p>
+			<div class="ask-thread" data-ask-thread hidden>
+				<p class="ask-answer" data-ask-answer></p>
+				<p class="ask-sources" data-ask-sources></p>
+				<p class="ask-foot">Answers come only from pages on this site. <button type="button" class="ask-link" data-ask-reset>Start over</button></p>
+			</div>
+		</div>
+	</dialog>
+</ask-docs>
+
+<script>
+	// Characters of page text sent per question. The OneTag limit is 32,000 for everything,
+	// so retrieval keeps a margin for the question, the rules and the chat history.
+	import cfg from 'virtual:starlight-onetag/config';
+	const MAX_CONTEXT = cfg.maxContext;
+	const PER_PAGE = cfg.perPage;
+	const TOP_PAGES = cfg.topPages;
+
+	const RULES = cfg.rules;
+
+	const MESSAGES: Record<string, string> = {
+		no_key: 'Ask AI is not set up on this site yet: the site owner needs to add a OneTag AI key to the starlight-onetag plugin.',
+		quota_exceeded: 'This site has used up its AI allowance for now.',
+		paused: 'The AI service is paused for today. Try again after 00:00 UTC.',
+		rate_limited: 'Too many questions in one minute. Give it a moment.',
+		too_large: 'That question is too long.',
+		network: 'Could not reach the AI service. Check your connection and try again.',
+		upstream: 'The AI provider had a problem. Try again in a few seconds.',
+		aborted: 'Stopped.',
+	};
+
+	type Page = { title: string; url: string; text: string };
+
+	const STOP = new Set(('a an and are as at be by can could do does for from how i if in into is it its me my of on or ' +
+		'our should site that the their there these this to use using we what when where which who why will with you your').split(' '));
+	// Words worth searching: letters and digits, not stop words, longest first, at most six.
+	function keywords(q: string): string[] {
+		const words = (q.toLowerCase().match(/[\p{L}\p{N}][\p{L}\p{N}'-]*/gu) || []).filter((w) => w.length > 1 && !STOP.has(w));
+		const unique = [...new Set(words)].sort((a, b) => b.length - a.length).slice(0, 6);
+		return unique.length ? unique : [q];
+	}
+
+	class AskDocs extends HTMLElement {
+		history: { role: 'user' | 'assistant'; content: string }[] = [];
+		controller: AbortController | null = null;
+		sdk: Promise<void> | null = null;
+
+		constructor() {
+			super();
+			const open = this.querySelector<HTMLButtonElement>('[data-ask-open]')!;
+			const close = this.querySelector<HTMLButtonElement>('[data-ask-close]')!;
+			const dialog = this.querySelector('dialog')!;
+			const form = this.querySelector<HTMLFormElement>('[data-ask-form]')!;
+			const input = form.querySelector('input')!;
+
+			open.addEventListener('click', () => {
+				dialog.showModal();
+				input.focus();
+				this.loadSdk();
+			});
+			close.addEventListener('click', () => dialog.close());
+			dialog.addEventListener('click', (e) => {
+				if (e.target === dialog) dialog.close();
+			});
+			window.addEventListener('keydown', (e) => {
+				if ((e.metaKey || e.ctrlKey) && e.key === '/') {
+					dialog.open ? dialog.close() : (dialog.showModal(), input.focus(), this.loadSdk());
+					e.preventDefault();
+				}
+			});
+			form.addEventListener('submit', (e) => {
+				e.preventDefault();
+				const q = input.value.trim();
+				if (!q) return;
+				input.value = '';
+				this.ask(q);
+			});
+			this.querySelector('[data-ask-reset]')!.addEventListener('click', () => this.reset());
+		}
+
+		// v1.js is loaded only when someone opens the dialog, so it never affects page speed.
+		loadSdk(): Promise<void> {
+			if (this.sdk) return this.sdk;
+			this.sdk = new Promise((resolve, reject) => {
+				if ((window as any).onetag) return resolve();
+				const s = document.createElement('script');
+				s.src = this.dataset.site + '/v1.js';
+				s.dataset.key = this.dataset.key || '';
+				s.onload = () => resolve();
+				s.onerror = () => reject(new Error('sdk'));
+				document.head.append(s);
+			});
+			return this.sdk;
+		}
+
+		// Top pages for the question from the Pagefind index Starlight builds on `astro build`.
+		// Pagefind matches every word of a query, so a question like "how do I deploy to Netlify"
+		// finds nothing: the keywords are searched one by one and pages are ranked by how many
+		// of them they match. In `astro dev` there is no index, so the current page is used.
+		async retrieve(question: string): Promise<Page[]> {
+			try {
+				const pf = await import(/* @vite-ignore */ this.dataset.base + 'pagefind/pagefind.js');
+				await pf.init();
+				const words = keywords(question);
+				if (!/[a-z0-9]{2,}/i.test(words.join(' '))) throw new Error('no latin keywords');
+				const searches = await Promise.all(words.map((w) => pf.search(w)));
+				const scores = new Map<string, { score: number; result: any }>();
+				searches.forEach((s) => {
+					s.results.slice(0, 10).forEach((r: any, rank: number) => {
+						const cur = scores.get(r.id) || { score: 0, result: r };
+						cur.score += 1 + Math.max(0, 10 - rank) / 20 + (r.score || 0) / 100;
+						scores.set(r.id, cur);
+					});
+				});
+				const top = [...scores.values()].sort((a, b) => b.score - a.score).slice(0, TOP_PAGES);
+				const hits = await Promise.all(top.map((t) => t.result.data()));
+				const pages: Page[] = hits.map((h: any) => ({
+					title: h.meta?.title || h.url,
+					url: h.url,
+					text: (h.content || h.excerpt || '').slice(0, PER_PAGE),
+				}));
+				if (pages.length) return pages;
+			} catch {}
+			// No index, or a question in a language the index does not match: hand over the whole
+			// site from the llms.txt files the build writes, when that fits in one call.
+			for (const name of ['llms-full.txt', 'llms-small.txt']) {
+				try {
+					const r = await fetch(this.dataset.base + name);
+					if (!r.ok) continue;
+					const text = await r.text();
+					if (text.length <= MAX_CONTEXT) return [{ title: 'All pages', url: this.dataset.base + name, text }];
+				} catch {}
+			}
+			const main = document.querySelector('main');
+			return [{ title: document.title, url: location.pathname, text: (main?.innerText || '').slice(0, PER_PAGE) }];
+		}
+
+		async ask(question: string) {
+			const status = this.querySelector<HTMLElement>('[data-ask-status]')!;
+			const thread = this.querySelector<HTMLElement>('[data-ask-thread]')!;
+			const answer = this.querySelector<HTMLElement>('[data-ask-answer]')!;
+			const sources = this.querySelector<HTMLElement>('[data-ask-sources]')!;
+			const submit = this.querySelector<HTMLButtonElement>('[data-ask-submit]')!;
+			const input = this.querySelector<HTMLInputElement>('[data-ask-form] input')!;
+
+			if (this.controller) this.controller.abort();
+			this.controller = new AbortController();
+			const { signal } = this.controller;
+			submit.disabled = true;
+			status.textContent = 'Reading the docs…';
+			status.classList.remove('error');
+			thread.hidden = false;
+			answer.textContent = '';
+			sources.textContent = '';
+
+			try {
+				await this.loadSdk();
+				const pages = await this.retrieve(question);
+				let budget = MAX_CONTEXT;
+				const parts: string[] = [];
+				for (const p of pages) {
+					const chunk = `Page: ${p.title} (${p.url})\n${p.text}`.slice(0, budget);
+					if (!chunk) break;
+					parts.push(chunk);
+					budget -= chunk.length;
+				}
+				let started = false;
+				const text: string = await (window as any).onetag.ask(
+					question + '\n\n(Reply in the same language as the question above.)',
+					parts,
+					{
+						system: RULES,
+						history: this.history,
+						maxTokens: cfg.maxTokens,
+						signal,
+						stream: (delta: string) => {
+							if (!started) {
+								started = true;
+								status.textContent = '';
+							}
+							answer.textContent += delta;
+						},
+					}
+				);
+				if (signal.aborted) return;
+				status.textContent = '';
+				this.history.push({ role: 'user', content: question }, { role: 'assistant', content: text });
+				if (this.history.length > 8) this.history = this.history.slice(-8);
+				input.placeholder = 'Ask a follow-up';
+				if (pages.length && pages[0].url !== location.pathname && pages[0].title !== 'All pages') {
+					sources.append('From: ');
+					pages.slice(0, 3).forEach((p, i) => {
+						if (i) sources.append(' · ');
+						const a = document.createElement('a');
+						a.href = p.url;
+						a.textContent = p.title;
+						sources.append(a);
+					});
+				}
+			} catch (e: any) {
+				if (signal.aborted) return;
+				status.textContent = MESSAGES[e?.code] || e?.message || 'Something went wrong.';
+				status.classList.add('error');
+			} finally {
+				if (!signal.aborted) submit.disabled = false;
+			}
+		}
+
+		reset() {
+			if (this.controller) this.controller.abort();
+			this.history = [];
+			const thread = this.querySelector<HTMLElement>('[data-ask-thread]')!;
+			thread.hidden = true;
+			this.querySelector<HTMLElement>('[data-ask-answer]')!.textContent = '';
+			this.querySelector<HTMLElement>('[data-ask-sources]')!.textContent = '';
+			this.querySelector<HTMLElement>('[data-ask-status]')!.textContent = '';
+			const input = this.querySelector<HTMLInputElement>('[data-ask-form] input')!;
+			input.placeholder = 'How do I deploy this to GitHub Pages?';
+			this.querySelector<HTMLButtonElement>('[data-ask-submit]')!.disabled = false;
+			input.focus();
+		}
+	}
+	customElements.define('ask-docs', AskDocs);
+</script>
+
+<style>
+	ask-docs {
+		display: contents;
+	}
+	[data-ask-open] {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		margin-inline-start: 0.5rem;
+		height: 2.5rem;
+		padding-inline: 0.6rem;
+		border: 1px solid var(--sl-color-accent);
+		border-radius: 0.5rem;
+		background: var(--sl-color-accent-low);
+		color: var(--sl-color-white);
+		font-size: var(--sl-text-sm);
+		cursor: pointer;
+		white-space: nowrap;
+	}
+	[data-ask-open]:hover {
+		background: var(--sl-color-accent);
+		color: var(--sl-color-black);
+	}
+	@media (max-width: 50rem) {
+		[data-ask-open] {
+			border: 0;
+			background: transparent;
+			color: var(--sl-color-gray-1);
+			padding-inline: 0.25rem;
+			margin-inline-start: 0;
+		}
+	}
+	dialog {
+		margin: 4rem auto auto;
+		width: 90%;
+		max-width: 40rem;
+		padding: 0;
+		border: 1px solid var(--sl-color-gray-5);
+		border-radius: 0.5rem;
+		background: var(--sl-color-gray-6);
+		color: var(--sl-color-text);
+		box-shadow: var(--sl-shadow-lg);
+	}
+	dialog::backdrop {
+		background: var(--sl-color-backdrop-overlay);
+		backdrop-filter: blur(0.25rem);
+	}
+	.ask-frame {
+		padding: 1.25rem 1.5rem 1.5rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.9rem;
+	}
+	.ask-head {
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+		font-size: var(--sl-text-lg);
+	}
+	[data-ask-close],
+	.ask-link {
+		border: 0;
+		background: none;
+		color: var(--sl-color-text-accent);
+		font: inherit;
+		font-size: var(--sl-text-sm);
+		cursor: pointer;
+		padding: 0;
+		text-decoration: underline;
+		text-underline-offset: 3px;
+	}
+	.ask-form {
+		display: flex;
+		gap: 0.5rem;
+	}
+	.ask-form input {
+		flex: 1;
+		min-width: 0;
+		font: inherit;
+		font-size: var(--sl-text-base);
+		padding: 0.6rem 0.8rem;
+		border: 1px solid var(--sl-color-gray-5);
+		border-radius: 0.4rem;
+		background: var(--sl-color-black);
+		color: var(--sl-color-white);
+	}
+	.ask-form input:focus {
+		outline: 2px solid var(--sl-color-accent);
+		outline-offset: 0;
+	}
+	[data-ask-submit] {
+		font: inherit;
+		font-weight: 600;
+		padding: 0 1rem;
+		border: 0;
+		border-radius: 0.4rem;
+		background: var(--sl-color-accent);
+		color: var(--sl-color-black);
+		cursor: pointer;
+	}
+	[data-ask-submit]:disabled {
+		opacity: 0.6;
+		cursor: wait;
+	}
+	.ask-status {
+		margin: 0;
+		min-height: 1.4em;
+		font-size: var(--sl-text-sm);
+		color: var(--sl-color-gray-2);
+	}
+	.ask-status.error {
+		color: var(--sl-color-red-high, #f87171);
+	}
+	.ask-thread {
+		display: flex;
+		flex-direction: column;
+		gap: 0.6rem;
+	}
+	.ask-answer {
+		margin: 0;
+		padding-inline-start: 0.9rem;
+		border-inline-start: 3px solid var(--sl-color-accent);
+		white-space: pre-wrap;
+		line-height: 1.6;
+		min-height: 1.6em;
+	}
+	.ask-sources,
+	.ask-foot {
+		margin: 0;
+		font-size: var(--sl-text-sm);
+		color: var(--sl-color-gray-2);
+	}
+</style>
