@@ -40,7 +40,7 @@ Fill in your email at [onetagai.com](https://onetagai.com/?ref=starlight-onetag)
 curl -X POST https://onetagai.com/api/signup -H "Content-Type: application/json" -d '{"email":"you@example.com"}'
 ```
 
-The key is public by design, like an analytics ID: it ends up in the built HTML and can only spend that account's allowance. You can also set it as `PUBLIC_ONETAG_KEY` in `.env` instead of the option. If an AI coding tool is setting this up for you, it can run that request with your email and ask you to paste the key.
+This key is designed to be public, like an analytics ID: it ends up in the built HTML and can only spend that account's allowance. You can also set it as `PUBLIC_ONETAG_KEY` in `.env` instead of the option. If an AI coding tool is setting this up for you, it can run that request with your email and ask you to paste the key.
 
 ## Options
 

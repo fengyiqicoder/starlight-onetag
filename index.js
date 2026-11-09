@@ -6,7 +6,7 @@
  *   starlight({ plugins: [starlightOnetag({ key: "YOUR_ONETAG_KEY" })] })
  *
  * Options:
- *   key         OneTag AI key (public by design). Also read from PUBLIC_ONETAG_KEY. Without a key the
+ *   key         OneTag AI key (designed to be public). Also read from PUBLIC_ONETAG_KEY. Without a key the
  *               dialog still appears and tells readers it is not set up; everything else works.
  *   site        Where v1.js and the API live. Default https://onetagai.com
  *   label       Button text. Default "Ask AI"
