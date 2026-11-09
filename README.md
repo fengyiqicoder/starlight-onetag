@@ -8,7 +8,7 @@ Ask AI for [Starlight](https://starlight.astro.build) docs. Adds an **Ask AI** b
 - The AI script loads only when the dialog opens. Lighthouse stays where it was.
 - Answers in the language of the question.
 
-Live demo: the [Lantern docs template](https://fengyiqicoder.github.io/astro-docs-ai/) runs the same component.
+Live demo: the [Astro AI Docs docs template](https://fengyiqicoder.github.io/astro-ai-docs/) runs the same component.
 
 ## Install
 
@@ -67,7 +67,7 @@ Nothing is stored on a server. OneTag AI keeps token counts and timestamps, not 
 
 ## See also
 
-- [Lantern](https://github.com/fengyiqicoder/astro-docs-ai): a docs template that ships with this dialog built in.
+- [Astro AI Docs](https://github.com/fengyiqicoder/astro-ai-docs): a docs template that ships with this dialog built in.
 - [Static AI Block](https://github.com/fengyiqicoder/static-ai-block): twelve copy-paste AI blocks for any static page.
 
 ## License
