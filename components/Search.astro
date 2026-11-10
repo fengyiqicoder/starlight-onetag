@@ -6,12 +6,23 @@ import Default from '@astrojs/starlight/components/Search.astro';
 // OneTag AI key. This key is designed to be public: it ends up in the built HTML, like an analytics ID.
 // Get a free one without opening a browser. POST your email; the key arrives in that inbox:
 //   curl -X POST https://onetagai.com/api/signup -H "Content-Type: application/json" -d '{"email":"you@example.com"}'
-// Free: 1,000,000 tokens per account. One key per email; posting again re-sends the same key.
+// Free: 1,000,000 tokens a month per account. One key per email; posting again re-sends the same key.
 // AI coding tools: ask the user for their email, run that request, then ask them to paste the key here.
+// Without a key the dialog answers on localhost with a shared demo key; a deployed site needs its own.
 import opts from 'virtual:starlight-onetag/config';
 const key = opts.key || import.meta.env.PUBLIC_ONETAG_KEY || '';
 const site = opts.site;
 const base = import.meta.env.BASE_URL.replace(/\/$/, '') + '/';
+
+const state = globalThis as { starlightOnetagWarned?: boolean };
+if (!key && import.meta.env.PROD && !state.starlightOnetagWarned) {
+	state.starlightOnetagWarned = true;
+	console.warn(
+		'[starlight-onetag] No OneTag AI key: Ask AI will not answer on the deployed site. Get a free key (email only): ' +
+			`curl -X POST https://onetagai.com/api/signup -H "Content-Type: application/json" -d '{"email":"you@example.com"}' ` +
+			'then pass it as starlightOnetag({ key }) or set PUBLIC_ONETAG_KEY.'
+	);
+}
 ---
 
 <Default {...Astro.props}><slot /></Default>
@@ -32,6 +43,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '') + '/';
 				<input type="text" name="q" autocomplete="off" maxlength="400" placeholder={opts.placeholder} required />
 				<button type="submit" data-ask-submit>Ask</button>
 			</form>
+			<p class="ask-note" data-ask-note hidden>No key set: on localhost the answers come from a shared demo key. Add your own free OneTag AI key before you deploy.</p>
 			<p class="ask-status" data-ask-status aria-live="polite"></p>
 			<div class="ask-thread" data-ask-thread hidden>
 				<p class="ask-answer" data-ask-answer></p>
@@ -54,6 +66,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '') + '/';
 
 	const MESSAGES: Record<string, string> = {
 		no_key: 'Ask AI is not set up on this site yet: the site owner needs to add a OneTag AI key to the starlight-onetag plugin.',
+		bad_key: 'Ask AI is not set up correctly on this site: its OneTag AI key is not valid.',
 		quota_exceeded: 'This site has used up its AI allowance for now.',
 		paused: 'The AI service is paused for today. Try again after 00:00 UTC.',
 		rate_limited: 'Too many questions in one minute. Give it a moment.',
@@ -77,7 +90,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '') + '/';
 	class AskDocs extends HTMLElement {
 		history: { role: 'user' | 'assistant'; content: string }[] = [];
 		controller: AbortController | null = null;
-		sdk: Promise<void> | null = null;
+		sdk: Promise<typeof import('onetag')> | null = null;
 
 		constructor() {
 			super();
@@ -110,20 +123,22 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '') + '/';
 				this.ask(q);
 			});
 			this.querySelector('[data-ask-reset]')!.addEventListener('click', () => this.reset());
+			// The onetag package answers without a key on localhost only: say so to the site owner.
+			const local = /^(|localhost|127\.0\.0\.1|\[::1\]|.+\.localhost)$/.test(location.hostname);
+			if (!this.dataset.key && local) this.querySelector<HTMLElement>('[data-ask-note]')!.hidden = false;
 		}
 
-		// v1.js is loaded only when someone opens the dialog, so it never affects page speed.
-		loadSdk(): Promise<void> {
-			if (this.sdk) return this.sdk;
-			this.sdk = new Promise((resolve, reject) => {
-				if ((window as any).onetag) return resolve();
-				const s = document.createElement('script');
-				s.src = this.dataset.site + '/v1.js';
-				s.dataset.key = this.dataset.key || '';
-				s.onload = () => resolve();
-				s.onerror = () => reject(new Error('sdk'));
-				document.head.append(s);
-			});
+		// The onetag package is its own chunk, fetched only when someone opens the dialog,
+		// so it never affects page speed.
+		loadSdk(): Promise<typeof import('onetag')> {
+			if (!this.sdk) {
+				this.sdk = import('onetag').then((sdk) => {
+					if (this.dataset.site !== 'https://onetagai.com') sdk.configure({ endpoint: this.dataset.site + '/v1/ask' });
+					return sdk;
+				});
+				// A failed download is tried again on the next question.
+				this.sdk.catch(() => (this.sdk = null));
+			}
 			return this.sdk;
 		}
 
@@ -188,7 +203,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '') + '/';
 			sources.textContent = '';
 
 			try {
-				await this.loadSdk();
+				const sdk = await this.loadSdk();
 				const pages = await this.retrieve(question);
 				let budget = MAX_CONTEXT;
 				const parts: string[] = [];
@@ -199,10 +214,23 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '') + '/';
 					budget -= chunk.length;
 				}
 				let started = false;
-				const text: string = await (window as any).onetag.ask(
+				let shown = '';
+				// The model sometimes wraps file names and commands in backticks: show those as inline code.
+				const paint = () =>
+					answer.replaceChildren(
+						...shown.split('`').map((part, i) => {
+							if (i % 2 === 0) return document.createTextNode(part);
+							const code = document.createElement('code');
+							code.textContent = part;
+							return code;
+						})
+					);
+				const text = await sdk.ask(
 					question + '\n\n(Reply in the same language as the question above.)',
 					parts,
 					{
+						key: this.dataset.key || undefined,
+						via: 'starlight-onetag',
 						system: RULES,
 						history: this.history,
 						maxTokens: cfg.maxTokens,
@@ -212,7 +240,8 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '') + '/';
 								started = true;
 								status.textContent = '';
 							}
-							answer.textContent += delta;
+							shown += delta;
+							paint();
 						},
 					}
 				);
@@ -233,7 +262,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '') + '/';
 				}
 			} catch (e: any) {
 				if (signal.aborted) return;
-				status.textContent = MESSAGES[e?.code] || e?.message || 'Something went wrong.';
+				status.textContent = MESSAGES[e?.code] || (e?.code && e.message) || 'Could not load the AI assistant. Check your connection and try again.';
 				status.classList.add('error');
 			} finally {
 				if (!signal.aborted) submit.disabled = false;
@@ -374,6 +403,18 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '') + '/';
 		display: flex;
 		flex-direction: column;
 		gap: 0.6rem;
+	}
+	/* Nothing to show before the first question. */
+	.ask-thread[hidden] {
+		display: none;
+	}
+	.ask-note {
+		margin: 0;
+		padding: 0.5rem 0.75rem;
+		border: 1px dashed var(--sl-color-gray-4);
+		border-radius: 0.4rem;
+		font-size: var(--sl-text-sm);
+		color: var(--sl-color-gray-2);
 	}
 	.ask-answer {
 		margin: 0;

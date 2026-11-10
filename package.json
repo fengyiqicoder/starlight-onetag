@@ -5,13 +5,16 @@
   "type": "module",
   "license": "MIT",
   "keywords": ["astro", "starlight", "starlight-plugin", "withastro", "docs", "ask-ai", "search", "chatbot", "onetag", "no-backend"],
-  "repository": { "type": "git", "url": "https://github.com/fengyiqicoder/starlight-onetag" },
+  "repository": { "type": "git", "url": "git+https://github.com/fengyiqicoder/starlight-onetag.git" },
   "homepage": "https://github.com/fengyiqicoder/starlight-onetag",
   "exports": {
     ".": "./index.js",
     "./Search.astro": "./components/Search.astro"
   },
   "files": ["index.js", "components", "README.md", "LICENSE"],
+  "dependencies": {
+    "onetag": "^1.2.0"
+  },
   "peerDependencies": {
     "@astrojs/starlight": ">=0.32.0",
     "astro": ">=5.0.0"

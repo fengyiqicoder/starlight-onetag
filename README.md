@@ -4,8 +4,8 @@ Ask AI for [Starlight](https://starlight.astro.build) docs. Adds an **Ask AI** b
 
 - Retrieval uses the Pagefind index Starlight already builds. No extra service, no indexing step.
 - Answers come from [OneTag AI](https://onetagai.com/?ref=starlight-onetag) with a public key, so your site stays static: no backend, no API key in the code.
-- Works without a key: the button shows, the dialog says Ask AI is not set up yet, everything else is untouched.
-- The AI script loads only when the dialog opens. Lighthouse stays where it was.
+- Works right after install: on localhost a shared demo key answers, so you can try it before signing up for anything.
+- The AI code is a separate chunk fetched only when the dialog opens. Lighthouse stays where it was.
 - Answers in the language of the question.
 
 Live demo: the [Astro AI Docs docs template](https://fengyiqicoder.github.io/astro-ai-docs/) runs the same component.
@@ -26,15 +26,19 @@ export default defineConfig({
   integrations: [
     starlight({
       title: "My docs",
-      plugins: [starlightOnetag({ key: "YOUR_ONETAG_KEY" })],
+      plugins: [starlightOnetag()],
     }),
   ],
 });
 ```
 
-## Get a free key
+Run `astro dev` and click **Ask AI**. For answers drawn from the whole site, run `astro build && astro preview`: the Pagefind index only exists after a build.
 
-Fill in your email at [onetagai.com](https://onetagai.com/?ref=starlight-onetag), or run this; the key arrives in that inbox (one key per email, 1,000,000 free tokens per account):
+## Before you deploy: get a free key
+
+The demo key answers on localhost only. A deployed site needs its own key, passed as `starlightOnetag({ key: "ot_..." })`. Without one, readers see a line saying Ask AI is not set up, and the build prints a warning.
+
+Fill in your email at [onetagai.com](https://onetagai.com/?ref=starlight-onetag), or run this; the key arrives in that inbox (one key per email, 1,000,000 free tokens a month):
 
 ```bash
 curl -X POST https://onetagai.com/api/signup -H "Content-Type: application/json" -d '{"email":"you@example.com"}'
@@ -54,12 +58,12 @@ This key is designed to be public, like an analytics ID: it ends up in the built
 | `perPage` | `6000` | Characters kept from each page. |
 | `maxContext` | `20000` | Characters of page text sent per question (the service limit is 32,000 for everything). |
 | `maxTokens` | `400` | Answer length cap. |
-| `site` | `https://onetagai.com` | Where the script and API live, for self-hosted deployments. |
+| `site` | `https://onetagai.com` | Where the API lives, for self-hosted deployments. |
 
 ## How it works
 
 1. The question is turned into keywords and searched in Pagefind (one search per keyword, pages ranked by how many they match). In `astro dev` there is no index, so the current page is used.
-2. The top pages (up to `maxContext` characters) and the question go to `onetag.ask(...)` from the browser; the answer streams into the dialog.
+2. The top pages (up to `maxContext` characters) and the question go to OneTag AI from the browser, through the [`onetag`](https://www.npmjs.com/package/onetag) package; the answer streams into the dialog.
 3. The pages used are listed under the answer. The last four exchanges are kept so "and on Netlify?" works after "how do I deploy?".
 4. If the question matches nothing in the index (for example a language the index does not match), the plugin falls back to `llms-full.txt` or `llms-small.txt` if your site generates them ([starlight-llms-txt](https://github.com/delucis/starlight-llms-txt)) and they fit in one call.
 

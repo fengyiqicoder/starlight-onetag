@@ -7,8 +7,9 @@
  *
  * Options:
  *   key         OneTag AI key (designed to be public). Also read from PUBLIC_ONETAG_KEY. Without a key the
- *               dialog still appears and tells readers it is not set up; everything else works.
- *   site        Where v1.js and the API live. Default https://onetagai.com
+ *               dialog answers on localhost with a shared demo key; on a deployed site it tells readers
+ *               it is not set up, and everything else works.
+ *   site        Where the API lives. Default https://onetagai.com
  *   label       Button text. Default "Ask AI"
  *   placeholder Input placeholder.
  *   rules       Instructions given to the model (persona, limits).
