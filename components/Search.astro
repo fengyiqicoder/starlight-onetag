@@ -90,7 +90,7 @@ if (!key && import.meta.env.PROD && !state.starlightOnetagWarned) {
 	class AskDocs extends HTMLElement {
 		history: { role: 'user' | 'assistant'; content: string }[] = [];
 		controller: AbortController | null = null;
-		sdk: Promise<typeof import('onetag')> | null = null;
+		sdk: Promise<typeof import('onetagai')> | null = null;
 
 		constructor() {
 			super();
@@ -130,9 +130,9 @@ if (!key && import.meta.env.PROD && !state.starlightOnetagWarned) {
 
 		// The onetag package is its own chunk, fetched only when someone opens the dialog,
 		// so it never affects page speed.
-		loadSdk(): Promise<typeof import('onetag')> {
+		loadSdk(): Promise<typeof import('onetagai')> {
 			if (!this.sdk) {
-				this.sdk = import('onetag').then((sdk) => {
+				this.sdk = import('onetagai').then((sdk) => {
 					if (this.dataset.site !== 'https://onetagai.com') sdk.configure({ endpoint: this.dataset.site + '/v1/ask' });
 					return sdk;
 				});

@@ -13,7 +13,7 @@
   },
   "files": ["index.js", "components", "README.md", "LICENSE"],
   "dependencies": {
-    "onetag": "^1.2.0"
+    "onetagai": "^1.2.0"
   },
   "peerDependencies": {
     "@astrojs/starlight": ">=0.32.0",

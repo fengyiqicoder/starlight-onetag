@@ -63,7 +63,7 @@ This key is designed to be public, like an analytics ID: it ends up in the built
 ## How it works
 
 1. The question is turned into keywords and searched in Pagefind (one search per keyword, pages ranked by how many they match). In `astro dev` there is no index, so the current page is used.
-2. The top pages (up to `maxContext` characters) and the question go to OneTag AI from the browser, through the [`onetag`](https://www.npmjs.com/package/onetag) package; the answer streams into the dialog.
+2. The top pages (up to `maxContext` characters) and the question go to OneTag AI from the browser, through the [`onetagai`](https://www.npmjs.com/package/onetagai) package; the answer streams into the dialog.
 3. The pages used are listed under the answer. The last four exchanges are kept so "and on Netlify?" works after "how do I deploy?".
 4. If the question matches nothing in the index (for example a language the index does not match), the plugin falls back to `llms-full.txt` or `llms-small.txt` if your site generates them ([starlight-llms-txt](https://github.com/delucis/starlight-llms-txt)) and they fit in one call.
 
