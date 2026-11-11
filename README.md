@@ -96,6 +96,8 @@ starlight({
 });
 ```
 
+The tools follow the reader: after a reader translates the page, the summary, the code explanations and the answers about a selection come in that language too, and a summary is kept in the browser once per language. To fix the language yourself, set `lang` on a plugin, for example `starlightOnetagSummary({ lang: 'German' })`.
+
 Each one has its own page with screenshots and options: [search](https://github.com/fengyiqicoder/starlight-onetag-search), [translate](https://github.com/fengyiqicoder/starlight-onetag-translate), [explain](https://github.com/fengyiqicoder/starlight-onetag-explain), [summary](https://github.com/fengyiqicoder/starlight-onetag-summary), [selection](https://github.com/fengyiqicoder/starlight-onetag-selection). The options are the same as listed there; the key also comes from `PUBLIC_ONETAG_KEY`.
 
 ## Use it from your own plugin

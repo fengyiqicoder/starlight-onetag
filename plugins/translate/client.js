@@ -1,5 +1,5 @@
 // Browser side of starlight-onetag-translate.
-import { addStyle, BASE_CSS, cacheGet, cacheKey, cacheSet, contentRoot, dropLegacy, el, errorText, hash, isLocal, loadSdk, store, demoNote } from '../shared.js';
+import { addStyle, BASE_CSS, cacheGet, cacheKey, cacheSet, contentRoot, dropLegacy, el, errorText, hash, isLocal, loadSdk, setReading, store, demoNote } from '../shared.js';
 
 // Chrome's built-in Translator API: on-device, free, no key. Codes follow its naming.
 function browserCode(c) {
@@ -110,6 +110,7 @@ export default function init(cfg) {
 		if (controller) controller.abort();
 		if (nodes && originals) nodes.forEach((n, i) => (n.nodeValue = originals[i]));
 		current = null;
+		setReading('');
 		original.hidden = true;
 		status.textContent = '';
 		status.classList.remove('error');
@@ -128,6 +129,8 @@ export default function init(cfg) {
 		originals = originals || nodes.map((n) => n.nodeValue);
 		const texts = originals.map((t) => t.replace(/\s+/g, ' ').trim());
 		current = lang;
+		// The other tools on the page answer in the language the reader now reads in.
+		setReading(lang);
 		if (cfg.remember) store(PREF, lang);
 		select.value = lang;
 		if (quick) quick.hidden = true;

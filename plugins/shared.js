@@ -124,10 +124,26 @@ export async function stream(cfg, prompt, input, target, opts = {}) {
 	return text;
 }
 
-// The language readers see answers in: the option, else the page's own language.
+// The language the reader chose with the translate button. It is kept on <html>, where every
+// plugin on the page can see it. Empty means the reader is on the page as it was written.
+const READING = 'data-onetag-reading';
+export function setReading(code) {
+	const root = document.documentElement;
+	if (code) root.setAttribute(READING, code);
+	else root.removeAttribute(READING);
+}
+
+// Calls fn after the reader changes language or goes back to the original.
+export function onReading(fn) {
+	new MutationObserver(fn).observe(document.documentElement, { attributes: true, attributeFilter: [READING] });
+}
+
+// The language readers see answers in: the option, else the language the reader chose with
+// the translate button, else the page's own language.
 export function answerLanguage(cfg) {
 	if (cfg.lang) return cfg.lang;
-	const code = document.documentElement.lang || 'en';
+	const root = document.documentElement;
+	const code = root.getAttribute(READING) || root.lang || 'en';
 	try {
 		return new Intl.DisplayNames(['en'], { type: 'language' }).of(code) || code;
 	} catch {
