@@ -98,6 +98,10 @@ starlight({
 
 Each one has its own page with screenshots and options: [search](https://github.com/fengyiqicoder/starlight-onetag-search), [translate](https://github.com/fengyiqicoder/starlight-onetag-translate), [explain](https://github.com/fengyiqicoder/starlight-onetag-explain), [summary](https://github.com/fengyiqicoder/starlight-onetag-summary), [selection](https://github.com/fengyiqicoder/starlight-onetag-selection). The options are the same as listed there; the key also comes from `PUBLIC_ONETAG_KEY`.
 
+## Use it from your own plugin
+
+`starlight-onetag/api` exposes the same helpers for other Starlight plugins that want an optional AI switch: `askDocs(cfg, question, target)`, `summarizePage(cfg, target)`, `explainText(cfg, text, target)`. [starlight-page-feedback](https://github.com/fengyiqicoder/starlight-page-feedback) uses it.
+
 ## See also
 
 - [Astro AI Docs](https://github.com/fengyiqicoder/astro-ai-docs): a docs template that ships with this dialog built in.
