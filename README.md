@@ -41,7 +41,7 @@ Run `astro dev` and click **Ask AI**. For answers drawn from the whole site, run
 
 The demo key answers on localhost only. A deployed site needs its own key, passed as `starlightOnetag({ key: "ot_..." })`. Without one, readers see a line saying Ask AI is not set up, and the build prints a warning.
 
-Fill in your email at [onetagai.com](https://onetagai.com/?ref=starlight-onetag), or run this; the key arrives in that inbox (one key per email, 1,000,000 free tokens a month):
+Fill in your email at [onetagai.com](https://onetagai.com/?ref=starlight-onetag), or run this; the key arrives in that inbox (one key per email, 1,000,000 free tokens, one time, no monthly reset):
 
 ```bash
 curl -X POST https://onetagai.com/api/signup -H "Content-Type: application/json" -d '{"email":"you@example.com"}'
