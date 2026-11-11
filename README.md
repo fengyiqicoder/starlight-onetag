@@ -69,6 +69,16 @@ This key is designed to be public, like an analytics ID: it ends up in the built
 
 Nothing is stored on a server. OneTag AI keeps token counts and timestamps, not questions or page text.
 
+## More AI for Starlight
+
+Each one is its own plugin; one OneTag AI key covers all of them.
+
+- [starlight-onetag-search](https://github.com/fengyiqicoder/starlight-onetag-search): AI answer inside the search dialog, above the Pagefind results
+- [starlight-onetag-translate](https://github.com/fengyiqicoder/starlight-onetag-translate): "Read in <your language>" button, AI translation of the page for the reader
+- [starlight-onetag-explain](https://github.com/fengyiqicoder/starlight-onetag-explain): "Explain this code" under every code block
+- [starlight-onetag-summary](https://github.com/fengyiqicoder/starlight-onetag-summary): "Summarize this page" box at the top of long pages
+- [starlight-onetag-selection](https://github.com/fengyiqicoder/starlight-onetag-selection): select any text, click Ask AI, get it explained in context
+
 ## See also
 
 - [Astro AI Docs](https://github.com/fengyiqicoder/astro-ai-docs): a docs template that ships with this dialog built in.
