@@ -1,17 +1,55 @@
 {
   "name": "starlight-onetag",
-  "version": "0.1.0",
-  "description": "Ask AI for Starlight docs: a dialog that answers from your own pages using the Pagefind index Starlight already builds. No backend; answers via OneTag AI with a public key.",
+  "version": "0.2.0",
+  "description": "AI for Starlight docs, no backend: Ask AI dialog, AI answers in search, one-click page translation for readers, Explain this code, page summaries and ask-about-selection. Answers via OneTag AI with a public key.",
   "type": "module",
   "license": "MIT",
-  "keywords": ["astro", "starlight", "starlight-plugin", "withastro", "docs", "ask-ai", "search", "chatbot", "onetag", "no-backend"],
-  "repository": { "type": "git", "url": "git+https://github.com/fengyiqicoder/starlight-onetag.git" },
+  "keywords": [
+    "ai-search",
+    "ask-ai",
+    "astro",
+    "chatbot",
+    "code",
+    "docs",
+    "explain",
+    "i18n",
+    "no-backend",
+    "onetag",
+    "pagefind",
+    "search",
+    "starlight",
+    "starlight-plugin",
+    "summary",
+    "translate",
+    "translation",
+    "withastro"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fengyiqicoder/starlight-onetag.git"
+  },
   "homepage": "https://github.com/fengyiqicoder/starlight-onetag",
   "exports": {
     ".": "./index.js",
-    "./Search.astro": "./components/Search.astro"
+    "./Search.astro": "./components/Search.astro",
+    "./translate": "./plugins/translate/index.js",
+    "./translate/client": "./plugins/translate/client.js",
+    "./explain": "./plugins/explain/index.js",
+    "./explain/client": "./plugins/explain/client.js",
+    "./summary": "./plugins/summary/index.js",
+    "./summary/client": "./plugins/summary/client.js",
+    "./search": "./plugins/search/index.js",
+    "./search/client": "./plugins/search/client.js",
+    "./selection": "./plugins/selection/index.js",
+    "./selection/client": "./plugins/selection/client.js"
   },
-  "files": ["index.js", "components", "README.md", "LICENSE"],
+  "files": [
+    "index.js",
+    "components",
+    "plugins",
+    "README.md",
+    "LICENSE"
+  ],
   "dependencies": {
     "onetagai": "^1.2.0"
   },

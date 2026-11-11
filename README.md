@@ -69,15 +69,31 @@ This key is designed to be public, like an analytics ID: it ends up in the built
 
 Nothing is stored on a server. OneTag AI keeps token counts and timestamps, not questions or page text.
 
-## More AI for Starlight
+## More AI features in this package
 
-Each one is its own plugin; one OneTag AI key covers all of them.
+Five more plugins ship in the same package. Add the ones you want next to `starlightOnetag()`; they share the key and add no component overrides.
 
-- [starlight-onetag-search](https://github.com/fengyiqicoder/starlight-onetag-search): AI answer inside the search dialog, above the Pagefind results
-- [starlight-onetag-translate](https://github.com/fengyiqicoder/starlight-onetag-translate): "Read in <your language>" button, AI translation of the page for the reader
-- [starlight-onetag-explain](https://github.com/fengyiqicoder/starlight-onetag-explain): "Explain this code" under every code block
-- [starlight-onetag-summary](https://github.com/fengyiqicoder/starlight-onetag-summary): "Summarize this page" box at the top of long pages
-- [starlight-onetag-selection](https://github.com/fengyiqicoder/starlight-onetag-selection): select any text, click Ask AI, get it explained in context
+```js
+import starlightOnetag from "starlight-onetag";
+import starlightOnetagSearch from "starlight-onetag/search";
+import starlightOnetagTranslate from "starlight-onetag/translate";
+import starlightOnetagExplain from "starlight-onetag/explain";
+import starlightOnetagSummary from "starlight-onetag/summary";
+import starlightOnetagSelection from "starlight-onetag/selection";
+
+starlight({
+  plugins: [
+    starlightOnetag(),
+    starlightOnetagSearch(),    // AI answer inside the search dialog, above the Pagefind results
+    starlightOnetagTranslate(), // "Read in <your language>": AI translation of the page for the reader
+    starlightOnetagExplain(),   // "Explain this code" under every code block
+    starlightOnetagSummary(),   // "Summarize this page" on long pages
+    starlightOnetagSelection(), // select text, click Ask AI, get it explained in context
+  ],
+});
+```
+
+Each one has its own page with screenshots and options: [search](https://github.com/fengyiqicoder/starlight-onetag-search), [translate](https://github.com/fengyiqicoder/starlight-onetag-translate), [explain](https://github.com/fengyiqicoder/starlight-onetag-explain), [summary](https://github.com/fengyiqicoder/starlight-onetag-summary), [selection](https://github.com/fengyiqicoder/starlight-onetag-selection). The options are the same as listed there; the key also comes from `PUBLIC_ONETAG_KEY`.
 
 ## See also
 
