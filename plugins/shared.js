@@ -149,6 +149,33 @@ export function hash(s) {
 	return (h >>> 0).toString(36);
 }
 
+// Answers kept in the reader's browser: one entry per feature, page and language. The entry
+// carries the hash of the text it was made from, so a page that changed gets a fresh answer
+// and the new one takes the place of the old one.
+export function cacheKey(feature, path, language) {
+	return 'starlight-onetag:' + feature + ':' + path + ':' + language;
+}
+
+export function cacheGet(key, sum) {
+	const entry = store(key);
+	return entry && !Array.isArray(entry) && typeof entry === 'object' && entry.h === sum && entry.t != null ? entry.t : null;
+}
+
+export function cacheSet(key, sum, value) {
+	store(key, { h: sum, t: value });
+}
+
+// 0.4 and earlier kept one entry per version of a page and never removed any.
+export function dropLegacy(feature) {
+	const prefix = 'starlight-onetag-' + feature + ':/';
+	try {
+		for (let i = localStorage.length - 1; i >= 0; i--) {
+			const key = localStorage.key(i);
+			if (key && key.startsWith(prefix)) localStorage.removeItem(key);
+		}
+	} catch {}
+}
+
 // Shown once per page to the site owner on localhost when no key is set.
 export function demoNote(cfg) {
 	if (cfg.key || !isLocal()) return null;

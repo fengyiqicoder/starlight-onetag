@@ -28,6 +28,8 @@ jobs:
           [ "$want" = "$GITHUB_REF_NAME" ] || { echo "tag $GITHUB_REF_NAME does not match package.json ($want)"; exit 1; }
       - name: Syntax check
         run: git ls-files '*.js' | xargs -n1 node --check
+      - name: Tests
+        run: npm test
       - name: Show what will be published
         run: npm --version && npm pack --dry-run
       - name: Publish

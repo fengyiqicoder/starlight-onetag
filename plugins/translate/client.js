@@ -1,5 +1,5 @@
 // Browser side of starlight-onetag-translate.
-import { addStyle, BASE_CSS, contentRoot, el, errorText, hash, isLocal, loadSdk, store, demoNote } from '../shared.js';
+import { addStyle, BASE_CSS, cacheGet, cacheKey, cacheSet, contentRoot, dropLegacy, el, errorText, hash, isLocal, loadSdk, store, demoNote } from '../shared.js';
 
 // Chrome's built-in Translator API: on-device, free, no key. Codes follow its naming.
 function browserCode(c) {
@@ -76,6 +76,7 @@ const SYSTEM =
 	'Output one line per segment, starting with its marker, for example «3» text. Same count, same order, nothing else.';
 
 export default function init(cfg) {
+	dropLegacy('translate');
 	const h1 = document.querySelector('h1#_top');
 	if (!h1 || !contentRoot()) return;
 	addStyle('starlight-onetag-translate', BASE_CSS + CSS);
@@ -131,8 +132,9 @@ export default function init(cfg) {
 		select.value = lang;
 		if (quick) quick.hidden = true;
 		status.classList.remove('error');
-		const cacheKey = 'starlight-onetag-translate:' + location.pathname + ':' + lang + ':' + hash(texts.join('\n'));
-		const cached = cfg.cache ? store(cacheKey) : null;
+		const key = cacheKey('translate', location.pathname, lang);
+		const sum = hash(texts.join('\n'));
+		const cached = cfg.cache ? cacheGet(key, sum) : null;
 		const result = Array.isArray(cached) && cached.length === texts.length ? cached : new Array(texts.length).fill(null);
 		const apply = () =>
 			result.forEach((t, i) => {
@@ -146,7 +148,13 @@ export default function init(cfg) {
 		try {
 			// Without a key, use the reader's browser when it can translate on its own.
 			const local = cfg.engine === 'browser' || (cfg.engine !== 'onetag' && !cfg.key);
-			const tr = local && todo.length ? await browserTranslator(pageLang, lang) : null;
+			// Everything came from the kept translation: nothing to ask for, whatever this browser can do.
+			if (!todo.length) {
+				status.textContent = local ? 'Translated.' : 'Translated by AI.';
+				original.hidden = false;
+				return;
+			}
+			const tr = local ? await browserTranslator(pageLang, lang) : null;
 			if (tr) {
 				const ids = todo.flat();
 				let done = 0;
@@ -164,13 +172,13 @@ export default function init(cfg) {
 				if (signal.aborted) return;
 				status.textContent = 'Translated in your browser.';
 				original.hidden = false;
-				if (cfg.cache) store(cacheKey, result.map((t, i) => t ?? texts[i]));
+				if (cfg.cache) cacheSet(key, sum, result.map((t, i) => t ?? texts[i]));
 				return;
 			}
 			if (!cfg.key && !isLocal() && cfg.engine !== 'onetag')
 				throw Object.assign(new Error('Translation works in a recent Chrome. In other browsers the site owner can add a free OneTag AI key.'), { code: 'no_browser' });
 			if (cfg.engine === 'browser') throw Object.assign(new Error('This browser cannot translate pages on its own. Try a recent Chrome.'), { code: 'no_browser' });
-			const sdk = todo.length ? await loadSdk(cfg.site) : null;
+			const sdk = await loadSdk(cfg.site);
 			for (let k = 0; k < todo.length; k++) {
 				status.textContent = `Translating ${k + 1}/${todo.length}…`;
 				const ids = todo[k];
@@ -191,7 +199,7 @@ export default function init(cfg) {
 			}
 			status.textContent = 'Translated by AI.';
 			original.hidden = false;
-			if (cfg.cache) store(cacheKey, result.map((t, i) => t ?? texts[i]));
+			if (cfg.cache) cacheSet(key, sum, result.map((t, i) => t ?? texts[i]));
 		} catch (e) {
 			if (signal.aborted) return;
 			status.textContent = errorText(e);

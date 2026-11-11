@@ -1,14 +1,16 @@
 // Browser side of starlight-onetag-summary.
-import { addStyle, answerLanguage, BASE_CSS, contentRoot, demoNote, el, errorText, hash, pageText, pageTitle, render, store, stream } from '../shared.js';
+import { addStyle, answerLanguage, BASE_CSS, cacheGet, cacheKey, cacheSet, contentRoot, demoNote, dropLegacy, el, errorText, hash, pageText, pageTitle, render, stream } from '../shared.js';
 
 export default function init(cfg) {
+	dropLegacy('summary');
 	const h1 = document.querySelector('h1#_top');
 	if (!h1 || !contentRoot()) return;
 	const text = pageText(28000);
 	if (text.length < cfg.minChars) return;
 	addStyle('starlight-onetag-summary', BASE_CSS + CSS);
 
-	const cacheKey = 'starlight-onetag-summary:' + location.pathname + ':' + hash(text);
+	const key = cacheKey('summary', location.pathname, answerLanguage(cfg));
+	const sum = hash(text);
 	const answer = el('div', { class: 'onetag-answer' });
 	const status = el('p', { class: 'onetag-status', 'aria-live': 'polite' });
 	const hide = el('button', { type: 'button', class: 'onetag-link', onclick: () => {
@@ -26,7 +28,7 @@ export default function init(cfg) {
 		button.hidden = true;
 		panel.hidden = false;
 		if (done) return;
-		const cached = cfg.cache ? store(cacheKey) : null;
+		const cached = cfg.cache ? cacheGet(key, sum) : null;
 		if (typeof cached === 'string' && cached) {
 			render(answer, cached);
 			done = true;
@@ -41,7 +43,7 @@ export default function init(cfg) {
 			});
 			status.textContent = '';
 			done = true;
-			if (cfg.cache) store(cacheKey, out);
+			if (cfg.cache) cacheSet(key, sum, out);
 		} catch (e) {
 			status.textContent = errorText(e);
 			status.classList.add('error');
