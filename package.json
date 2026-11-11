@@ -1,6 +1,6 @@
 {
   "name": "starlight-onetag",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "AI for Starlight docs, no backend: Ask AI dialog, AI answers in search, one-click page translation for readers, Explain this code, page summaries and ask-about-selection. Answers via OneTag AI with a public key.",
   "type": "module",
   "license": "MIT",

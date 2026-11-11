@@ -1,14 +1,17 @@
 # starlight-onetag
 
-Ask AI for [Starlight](https://starlight.astro.build) docs. Adds an **Ask AI** button next to the search box; readers ask a question and get an answer written from your own pages, with links to them and follow-ups.
+Free AI features for [Starlight](https://starlight.astro.build) docs. No account, no backend, no credit card.
 
-- Retrieval uses the Pagefind index Starlight already builds. No extra service, no indexing step.
-- Answers come from [OneTag AI](https://onetagai.com/?ref=starlight-onetag) with a public key, so your site stays static: no backend, no API key in the code.
-- Works right after install: on localhost a shared demo key answers, so you can try it before signing up for anything.
-- The AI code is a separate chunk fetched only when the dialog opens. Lighthouse stays where it was.
-- Answers in the language of the question.
+- **Ask AI**: a button next to search; readers ask, the answer comes from your own pages, with links.
+- **AI answers in search**, above the Pagefind results.
+- **Read in your language**: one-click page translation for readers. In Chrome it runs on the reader's device, with no key at all.
+- **Explain this code** under code blocks, **Summarize this page**, and **ask about a selection**.
 
-Live demo: the [Astro AI Docs docs template](https://fengyiqicoder.github.io/astro-ai-docs/) runs the same component.
+Each feature is optional and none needs a server. On localhost everything works right after install. A deployed site needs a free key for the AI answers: enter an email, the key arrives in your inbox. No sign-up form, no password, no dashboard.
+
+Retrieval uses the Pagefind index Starlight already builds, and the AI code loads only when a reader uses a feature, so Lighthouse stays where it was.
+
+Live demo: the [Astro AI Docs](https://fengyiqicoder.github.io/astro-ai-docs/guides/ai-features/) template runs every feature.
 
 ## Install
 
@@ -34,7 +37,7 @@ export default defineConfig({
 
 Run `astro dev` and click **Ask AI**. For answers drawn from the whole site, run `astro build && astro preview`: the Pagefind index only exists after a build.
 
-## Before you deploy: get a free key
+## Before you deploy: get a free key (email only)
 
 The demo key answers on localhost only. A deployed site needs its own key, passed as `starlightOnetag({ key: "ot_..." })`. Without one, readers see a line saying Ask AI is not set up, and the build prints a warning.
 
